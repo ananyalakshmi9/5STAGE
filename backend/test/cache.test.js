@@ -1,6 +1,9 @@
 const request = require("supertest");
 const app = require("../server");
 
+// ----------------------------------------------------
+// CORE TESTS
+// ----------------------------------------------------
 describe("Cache API — Core Tests", () => {
 
   test("Basic PUT/GET", async () => {
@@ -36,10 +39,10 @@ describe("Cache API — Core Tests", () => {
   });
 
 });
-  
+
 
 // ----------------------------------------------------
-// ⭐ AUTO-GENERATED MASS TESTS (40 TEST CASES)
+// AUTO-GENERATED LOAD TESTS (40 TEST CASES)
 // ----------------------------------------------------
 describe("Auto-Generated Load Tests", () => {
 
@@ -58,8 +61,9 @@ describe("Auto-Generated Load Tests", () => {
 
 });
 
+
 // ----------------------------------------------------
-// ⭐ TTL Variation Tests (10 CASES)
+// TTL Variation Tests (10 CASES)
 // ----------------------------------------------------
 describe("TTL Variation Tests", () => {
 
@@ -77,7 +81,7 @@ describe("TTL Variation Tests", () => {
 
 
 // ----------------------------------------------------
-// ⭐ Invalid Input Tests (5 CASES)
+// INVALID INPUT TESTS (5 CASES)
 // ----------------------------------------------------
 describe("Invalid Input Tests", () => {
 
@@ -121,7 +125,7 @@ describe("Invalid Input Tests", () => {
 
 
 // ----------------------------------------------------
-// ⭐ Metrics + Health Tests (2 CASES)
+// METRICS + HEALTH (2 CASES)
 // ----------------------------------------------------
 describe("Metrics + Health", () => {
 
@@ -137,6 +141,7 @@ describe("Metrics + Health", () => {
     expect(r.body).toHaveProperty("hits");
     expect(r.body).toHaveProperty("misses");
     expect(r.body).toHaveProperty("items");
+    expect(r.body).toHaveProperty("expired");
   });
 
 });

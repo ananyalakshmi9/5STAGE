@@ -1,73 +1,70 @@
 class Cache {
   constructor(maxItems = 1000) {
     this.maxItems = maxItems;
-    this.map = new Map();
+    this.store = new Map(); // key → { value, expiry }
+    this.hits = 0;
+    this.misses = 0;
+    this.expired = 0;
   }
 
-  _now() { return Date.now(); }
+  set(key, base64Value, ttlSeconds = null) {
+    const expiry = ttlSeconds ? Date.now() + ttlSeconds * 1000 : null;
+    const exists = this.store.has(key);
 
-  _isExpired(entry) {
-    return entry.expiresAt !== null && entry.expiresAt <= this._now();
-  }
+    this.store.set(key, { value: base64Value, expiry });
 
-  _touch(key) {
-    const v = this.map.get(key);
-    this.map.delete(key);
-    this.map.set(key, v);
-  }
-
-  set(key, value, ttlSeconds = null) {
-    const expiresAt = ttlSeconds ? (this._now() + ttlSeconds * 1000) : null;
-
-    if (this.map.has(key)) {
-      this.map.set(key, { value, expiresAt });
-      this._touch(key);
-      return { updated: true };
+    // LRU eviction (remove oldest)
+    if (this.store.size > this.maxItems) {
+      const oldest = this.store.keys().next().value;
+      this.store.delete(oldest);
     }
 
-    // LRU eviction
-    while (this.map.size >= this.maxItems) {
-      const lruKey = this.map.keys().next().value;
-      this.map.delete(lruKey);
-    }
-
-    this.map.set(key, { value, expiresAt });
-    return { created: true };
+    return { updated: exists };
   }
 
   get(key) {
-    const entry = this.map.get(key);
-    if (!entry) return null;
-    if (this._isExpired(entry)) {
-      this.map.delete(key);
+    const entry = this.store.get(key);
+
+    if (!entry) {
+      this.misses++;
       return null;
     }
-    this._touch(key);
+
+    if (entry.expiry && entry.expiry <= Date.now()) {
+      this.store.delete(key);
+      this.expired++;
+      this.misses++;
+      return null;
+    }
+
+    // LRU promote: delete + reinsert
+    this.store.delete(key);
+    this.store.set(key, entry);
+
+    this.hits++;
     return entry.value;
   }
 
   del(key) {
-    return this.map.delete(key);
+    return this.store.delete(key);
   }
 
   cleanupExpired() {
-    const now = this._now();
-    for (const [k, v] of this.map.entries()) {
-      if (v.expiresAt !== null && v.expiresAt <= now) {
-        this.map.delete(k);
+    const now = Date.now();
+    for (const [key, entry] of this.store.entries()) {
+      if (entry.expiry && entry.expiry <= now) {
+        this.store.delete(key);
+        this.expired++;
       }
     }
   }
 
   stats() {
-    const now = this._now();
-    let expired = 0;
-    for (const v of this.map.values()) {
-      if (v.expiresAt !== null && v.expiresAt <= now) expired++;
-    }
     return {
-      items: this.map.size,
-      expired
+      hits: this.hits,
+      misses: this.misses,
+      items: this.store.size,
+      expired: this.expired
     };
   }
 }
