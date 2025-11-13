@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install backend deps
+        run: |
+          cd backend
+          npm install --legacy-peer-deps
+
+      - name: Install frontend deps
+        run: |
+          cd frontend
+          npm install --legacy-peer-deps
+
+      - name: Run backend tests
+        run: |
+          cd backend
+          npm test
+
+      - name: Run ESLint
+        run: |
+          cd backend
+          npm run lint || true
+
+      - name: Security audit
+        run: |
+          cd backend
+          npm audit --audit-level=low || true
+
+      - name: Prepare deployment folder
+        run: |
+          mkdir deployment
+          cp -r backend deployment/backend
+          cp -r frontend deployment/frontend
+          cp -r docs deployment/docs 2>/dev/null || true
+          zip -r deployment-package.zip deployment
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cache-project
+          path: deployment-package.zip
